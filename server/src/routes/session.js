@@ -23,7 +23,6 @@ sessionRouter.post("/session", async (req, res, next) => {
 
 sessionRouter.get("/session", (_req, res) => {
   res.json({
-    provider: config.remoteProvider,
     active: sessionManager.list(),
     max: config.maxSessions,
     idleTimeoutMs: config.sessionIdleMs,

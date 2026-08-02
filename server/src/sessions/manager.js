@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import { config } from "../config.js";
 import { assertSafeUrl } from "../lib/ssrf.js";
 import { LocalSession } from "./localProvider.js";
-import { HyperbeamSession } from "./hyperbeamProvider.js";
 
 /**
  * Owns the lifecycle of remote browser sessions.
@@ -14,7 +13,7 @@ import { HyperbeamSession } from "./hyperbeamProvider.js";
  */
 class SessionManager {
   constructor() {
-    /** @type {Map<string, LocalSession|HyperbeamSession>} */
+    /** @type {Map<string, LocalSession>} */
     this.sessions = new Map();
     this.sweeper = null;
   }
@@ -43,8 +42,7 @@ class SessionManager {
     const { url } = await assertSafeUrl(rawUrl);
     const id = crypto.randomBytes(9).toString("base64url");
 
-    const Provider = config.remoteProvider === "hyperbeam" ? HyperbeamSession : LocalSession;
-    const session = new Provider(id, url.href, { width, height });
+    const session = new LocalSession(id, url.href, { width, height });
 
     // Reserve the slot before the slow start() so concurrent callers can't
     // both pass the capacity check.

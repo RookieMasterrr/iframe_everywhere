@@ -7,9 +7,6 @@ export const config = {
   // Origin allowed to call the API and open a stream.
   publicOrigin: process.env.PUBLIC_ORIGIN || "http://localhost:5173",
 
-  remoteProvider: process.env.REMOTE_PROVIDER || "local",
-  hyperbeamKey: process.env.HYPERBEAM_API_KEY || null,
-
   sessionIdleMs: num(process.env.SESSION_IDLE_MS, 180_000),
   maxSessions: num(process.env.MAX_SESSIONS, 4),
 

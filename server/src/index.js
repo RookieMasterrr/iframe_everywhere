@@ -15,7 +15,6 @@ app.use(express.json({ limit: "64kb" }));
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
-    remoteProvider: config.remoteProvider,
     publicOrigin: config.publicOrigin,
     activeSessions: sessionManager.list().length,
   });
@@ -41,7 +40,6 @@ attachWebSocket(server);
 
 server.listen(config.port, () => {
   console.log(`\n  remote-browser api      http://localhost:${config.port}`);
-  console.log(`  remote provider         ${config.remoteProvider}`);
   console.log(`  frontend origin         ${config.publicOrigin}`);
   console.log(`  session cap             ${config.maxSessions} concurrent, ${config.sessionIdleMs / 1000}s idle timeout\n`);
 });

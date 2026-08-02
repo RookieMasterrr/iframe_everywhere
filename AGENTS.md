@@ -8,10 +8,15 @@ wrong.
 
 One thing only: open a URL in a server-side Chromium and stream it to a browser
 client. It used to have two cheaper fallback tiers (direct iframe after a
-`X-Frame-Options`/CSP check, then an Open Graph card + Playwright screenshot).
-Those were deliberately removed. If you find a reference to `detect`,
-`preview`, `screenshot`, `framePolicy`, `TtlCache`, or "tier N" anywhere, it is
-a leftover — delete it, don't rebuild it.
+`X-Frame-Options`/CSP check, then an Open Graph card + Playwright screenshot),
+and a second pluggable provider backed by a hosted WebRTC VM. All of it was
+deliberately removed. If you find a reference to `detect`, `preview`,
+`screenshot`, `framePolicy`, `TtlCache`, "tier N", `hyperbeam`, `embedUrl`, or
+`REMOTE_PROVIDER` anywhere, it is a leftover — delete it, don't rebuild it.
+
+There is exactly one session class (`LocalSession`) and one transport
+(JPEG-over-WebSocket). Don't reintroduce a provider abstraction for a second
+implementation that doesn't exist yet.
 
 ## Commands
 
@@ -94,13 +99,9 @@ throw away a browser the user is logged into; the idle reaper owns cleanup.
   server-side. The server never learns the client's display size.
 - **One browser per session, never pooled.** Real logins happen inside; cookie
   jars must not outlive or cross sessions.
-- **Both providers satisfy the same shape** — `start`, `attach`, `detach`,
-  `touch`, `idleMs`, `handleInput`, `close`, `toJSON`. Hyperbeam no-ops the
-  input methods because its client talks to Hyperbeam directly. Keep them
-  interchangeable so `REMOTE_PROVIDER` stays a one-line switch.
-- **`toJSON` is the client contract.** A `streamPath` means "connect a
-  WebSocket"; an `embedUrl` means "render an iframe". `RemoteSession.vue`
-  branches on which is present.
+- **`toJSON` is the client contract.** It carries the `streamPath` that
+  `RemoteSession.vue` opens a WebSocket against. Change the shape and the
+  client breaks silently.
 
 ## Where things live
 

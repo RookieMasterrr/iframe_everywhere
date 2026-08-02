@@ -6,10 +6,10 @@ import { config } from "../config.js";
  * client as JPEG frames over a WebSocket via CDP's Page.startScreencast, with
  * input events forwarded back.
  *
- * Tradeoff versus a hosted WebRTC provider: this is simple, free, and has no
- * external dependency, but JPEG-over-WebSocket uses far more bandwidth than
- * H.264 and looks softer under motion. Fine for a few concurrent users on a
- * LAN or a single box; use the Hyperbeam provider when you need real scale.
+ * Tradeoff of JPEG-over-WebSocket versus real video: this is simple, free, and
+ * has no external dependency, but it costs far more bandwidth than H.264 and
+ * looks softer under motion. Fine for a few concurrent users on a LAN or a
+ * single box; scaling past that needs a WebRTC transport, not a bigger box.
  *
  * Input is dispatched through Playwright's mouse/keyboard APIs rather than raw
  * CDP Input events, because Playwright already owns the messy business of
@@ -243,7 +243,6 @@ export class LocalSession {
   toJSON() {
     return {
       id: this.id,
-      provider: "local",
       startUrl: this.startUrl,
       width: this.width,
       height: this.height,

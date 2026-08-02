@@ -2,7 +2,7 @@ import { WebSocketServer } from "ws";
 import { sessionManager } from "./sessions/manager.js";
 
 /**
- * Frame stream + input channel for local-provider sessions.
+ * Frame stream + input channel for a remote browser session.
  *
  * Protocol:
  *   server -> client   binary  : one JPEG frame

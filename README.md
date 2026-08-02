@@ -57,8 +57,7 @@ server/                     Express + ws API (ESM, no transpile)
   src/routes/session.js     create / list / destroy
   src/ws.js                 upgrade handling, frame + input plumbing
   src/sessions/manager.js   lifecycle: concurrency cap, idle reaper
-  src/sessions/localProvider.js      self-hosted Chromium + CDP screencast
-  src/sessions/hyperbeamProvider.js  hosted WebRTC alternative
+  src/sessions/localProvider.js      Chromium + CDP screencast
   test/ssrf.test.js         node:test, no network or DNS needed
 web/                        Vue 3 + Vite SPA
   src/App.vue               URL entry, launches a session
@@ -90,37 +89,27 @@ All server config lives in `server/.env`; see `.env.example`.
 |---|---|---|
 | `PORT` | `8787` | HTTP + WebSocket both listen here |
 | `PUBLIC_ORIGIN` | `http://localhost:5173` | the only origin allowed to call the API (CORS) |
-| `REMOTE_PROVIDER` | `local` | `local` or `hyperbeam` |
-| `HYPERBEAM_API_KEY` | — | required when provider is `hyperbeam` |
 | `SESSION_IDLE_MS` | `180000` | reap a session after this long with no input |
 | `MAX_SESSIONS` | `4` | concurrent cap; over it, `POST /api/session` returns 503 |
 | `SSRF_ALLOW_CIDRS` | empty | reserved ranges to re-permit — read the security section first |
 
-## Providers
+## How the stream works
 
-**`local`** — Playwright launches a dedicated Chromium per session. CDP's
+Playwright launches a dedicated Chromium per session. CDP's
 `Page.startScreencast` emits JPEG frames (quality 70) which are pushed over a
 WebSocket as binary messages; the client decodes each with `createImageBitmap`
 and paints it to a `<canvas>`.
 
 Simple, free, no external dependency. The tradeoff is bandwidth and fidelity:
 JPEG-over-WebSocket costs far more than H.264 and looks soft under motion.
-Fine for a handful of users on a LAN or a single box.
-
-**`hyperbeam`** — a hosted VM with real WebRTC video. Lower latency, far more
-efficient, and the scaling is someone else's problem. `POST /api/session`
-returns an `embedUrl` instead of a `streamPath`, and the client simply iframes
-it — Hyperbeam serves that page with permissive `frame-ancestors`. Costs money
-and needs an API key. `offline_timeout` is set on the remote VM as a backstop so
-a crashed server does not leave it billing forever.
-
-The manager treats both alike, so switching is a one-line env change.
+Fine for a handful of users on a LAN or a single box; scaling past that means
+moving to a WebRTC transport, not a bigger machine.
 
 ## HTTP API
 
 #### `GET /api/health`
 ```json
-{ "ok": true, "remoteProvider": "local", "publicOrigin": "http://localhost:5173", "activeSessions": 0 }
+{ "ok": true, "publicOrigin": "http://localhost:5173", "activeSessions": 0 }
 ```
 
 #### `POST /api/session`
@@ -132,7 +121,6 @@ descriptor:
 ```json
 {
   "id": "Fro32lixQK02",
-  "provider": "local",
   "startUrl": "https://github.com/",
   "width": 1280, "height": 720,
   "idleMs": 2402, "clients": 0,
@@ -140,11 +128,10 @@ descriptor:
   "idleTimeoutMs": 180000
 }
 ```
-`400` for an unsafe or malformed URL, `503` at capacity, `502` if a hosted
-provider rejects the request.
+`400` for an unsafe or malformed URL, `503` at capacity.
 
 #### `GET /api/session`
-Lists active sessions plus `provider`, `max` and `idleTimeoutMs`.
+Lists active sessions plus `max` and `idleTimeoutMs`.
 
 #### `DELETE /api/session/:id`
 Closes the browser immediately. `200` if it existed, `404` otherwise.
@@ -251,8 +238,8 @@ Three things to know before this faces the internet:
 
 ## Limitations
 
-- Text is video-grade — readable, not crisp. Inherent to JPEG streaming; use
-  the Hyperbeam provider if that matters.
+- Text is video-grade — readable, not crisp. Inherent to JPEG streaming;
+  fixing it means a real video codec, not a quality bump.
 - Modifier combinations (Cmd/Ctrl + key) are intentionally not forwarded, so
   they keep working in *your* browser. Paste is special-cased and forwarded as
   a `text` message.

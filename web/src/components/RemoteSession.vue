@@ -103,13 +103,6 @@ onMounted(async () => {
       height: 720,
     });
     session.value = created;
-
-    // Hosted providers hand back an embeddable page instead of a raw stream.
-    if (created.embedUrl) {
-      status.value = "live";
-      return;
-    }
-
     connect(created.streamPath);
   } catch (err) {
     status.value = "error";
@@ -224,30 +217,11 @@ function navigate(target) {
         @keydown.enter="navigate($event.target.value)"
       />
 
-      <span v-if="status === 'live' && !session?.embedUrl" class="fps"
-        >{{ fps }} fps</span
-      >
+      <span v-if="status === 'live'" class="fps">{{ fps }} fps</span>
       <button class="close" @click="emit('close')">Close session</button>
     </header>
 
-    <!-- Hosted provider: it serves its own embeddable page. -->
-    <iframe
-      v-if="session?.embedUrl"
-      :src="session.embedUrl"
-      class="hosted"
-      allow="
-        autoplay;
-        fullscreen;
-        clipboard-read;
-        clipboard-write;
-        camera;
-        microphone;
-      "
-    />
-
-    <!-- Local provider: raw frame stream on a canvas. -->
     <div
-      v-else
       ref="stage"
       class="stage"
       tabindex="0"
@@ -366,13 +340,6 @@ function navigate(target) {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.hosted {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border: 1px solid var(--border);
-  border-radius: 10px;
 }
 
 .overlay {
