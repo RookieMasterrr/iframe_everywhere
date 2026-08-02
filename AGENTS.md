@@ -30,8 +30,9 @@ npm run build                  # frontend to web/dist/
 Node 20+. Server is plain ESM with no build step. Nothing is transpiled; there
 is no linter or formatter configured, so match surrounding style by hand.
 
-**This is not a git repository yet.** `git init` before doing anything you might
-want to undo.
+**Git history starts shallow.** `main` holds the baseline from before the
+provider cleanup; everything since is on topic branches. Branch before anything
+you might want to undo rather than committing to `main`.
 
 ## Verifying a change
 
@@ -43,13 +44,28 @@ below) and drive it end to end:
 ```bash
 cd server && node src/index.js &
 curl -s localhost:8787/api/health
-# create, stream, tear down — expect frames > 0 and a real page title in meta
+# create, stream, tear down — expect a real page title in meta, and frames
+# once something on the page actually repaints (see below)
 ```
 
 A minimal harness: `POST /api/session`, connect a `ws` client to the returned
-`streamPath`, count binary messages for ~3 s, then `DELETE` the session. Twelve
-or so frames in three seconds against `https://example.com` is healthy. Always
-`DELETE` — a leaked session holds a Chromium for the full idle timeout.
+`streamPath`, **then** send a few `wheel` messages to scroll the page, and count
+binary messages after that. Always `DELETE` — a leaked session holds a Chromium
+for the full idle timeout.
+
+**Counting frames on an idle page proves nothing.** `Page.startScreencast` emits
+only on visual change, and `broadcastFrame` drops frames outright when no client
+is attached. A small static page finishes painting before your test client can
+connect, so nothing repaints and you correctly see *zero* frames — this is not a
+broken stream, and chasing it wastes an afternoon. Force a repaint, then count:
+
+| Target | idle 1.5 s | after 10 scroll events |
+|---|---|---|
+| `https://example.com` | 0 frames | ~70 frames |
+| `en.wikipedia.org/wiki/Iframe` | ~10 frames | ~64 frames (4.4 MB) |
+
+Scrolling also exercises the input path, so a non-zero count after scrolling
+tests both directions at once.
 
 `GET /api/session` tells you what is currently alive if you lose track.
 
@@ -122,11 +138,11 @@ declares a `{"t":"error"}` frame that is never actually emitted.
 ## Style
 
 Existing code explains *why*, not *what*, and the comments are load-bearing —
-they record tradeoffs (JPEG vs WebRTC, `allow-same-origin` in the old iframe
-sandbox, why input goes through Playwright's keyboard API rather than raw CDP)
-that are not recoverable from reading the code. Match that: skip narration of
-obvious mechanics, but leave a note wherever a reader would reasonably ask
-"why is it done this way".
+they record tradeoffs (JPEG vs a real video codec, why frames are dropped rather
+than queued past 2 MB, why input goes through Playwright's keyboard API rather
+than raw CDP) that are not recoverable from reading the code. Match that: skip
+narration of obvious mechanics, but leave a note wherever a reader would
+reasonably ask "why is it done this way".
 
 Vue: `<script setup>`, composition API, scoped styles per component. Shared CSS
 custom properties live in `web/src/style.css` and are light/dark aware via

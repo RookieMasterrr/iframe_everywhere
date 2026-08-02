@@ -247,7 +247,7 @@ Three things to know before this faces the internet:
   because only that tab is being screencast.
 - `canGoBack` in the `meta` message is hardcoded `true` rather than reflecting
   real history state.
-- Audio is not streamed by the local provider.
+- Audio is not streamed.
 
 ## Troubleshooting
 
@@ -261,11 +261,18 @@ repo root instead of `server/`. See the note under Quick start.
 
 **Session dies while reading.** Raise `SESSION_IDLE_MS`. The 20-second
 heartbeat should prevent this; if it does not, check the WebSocket is actually
-connected — the fps counter in the toolbar reads `0` when it is not.
+connected. Scroll the page and watch the fps counter: if it climbs, the
+connection is fine. A steady `0` on a page you are not touching is normal —
+frames are only sent when something repaints.
 
 **503 on every create.** `MAX_SESSIONS` is reached and sessions are idling out
 their full timeout. Check `GET /api/session` and lower `SESSION_IDLE_MS`.
 
-**Blank canvas, no frames.** Almost always the screencast ack path. Run the
-server with `DEBUG=1` to surface input and CDP errors that are otherwise
-swallowed.
+**0 fps on a still page.** Expected, not a fault. `Page.startScreencast` emits
+only on visual change, so a page that has finished painting sends nothing until
+you scroll or click.
+
+**Canvas never paints anything at all.** Different symptom, real problem —
+usually the screencast ack path, since a missed `Page.screencastFrameAck` stops
+the stream after the first frame with no error anywhere. Run the server with
+`DEBUG=1` to surface input and CDP errors that are otherwise swallowed.
